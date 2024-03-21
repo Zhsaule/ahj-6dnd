@@ -1,8 +1,7 @@
 export default class Card {
-  constructor(id, text, onDelete) {
+  constructor(id, text) {
     this.id = id;
     this.text = text;
-    this.onDelete = onDelete;
     this.element = this.createCardElement();
     this.addDragEvents();
   }
@@ -17,10 +16,12 @@ export default class Card {
     deleteIcon.innerHTML = '&times;';
     deleteIcon.className = 'delete-icon';
     deleteIcon.onclick = () => {
+      const currentColumnTitle = this.element.closest('.column').querySelector('h2').textContent;
+      const deleteEvent = new CustomEvent('cardDeleted', {
+        detail: { cardId: this.id, columnTitle: currentColumnTitle },
+      });
+      document.dispatchEvent(deleteEvent);
       this.element.remove();
-      if (typeof this.onDelete === 'function') {
-        this.onDelete(); // Вызываем onDelete, если он функция
-      }
     };
 
     cardElement.appendChild(deleteIcon);

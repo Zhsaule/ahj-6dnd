@@ -6,6 +6,7 @@ export default class Column {
     this.cards = [];
     this.element = this.createColumnElement();
     this.addDropEvents();
+    document.addEventListener('cardDeleted', this.handleRemoveCard.bind(this));
   }
 
   createColumnElement() {
@@ -39,7 +40,8 @@ export default class Column {
 
   addCard(text) {
     const cardId = Date.now().toString(); // Генерируем ID здесь
-    const card = new Card(cardId, text, () => this.removeCard(cardId));
+    // const card = new Card(cardId, text, () => this.removeCard(cardId));
+    const card = new Card(cardId, text);
     this.cards.push({ id: cardId, text, element: card.element });
     this.element.querySelector('.cards-container').appendChild(card.element);
     this.updateLocalStorage();
@@ -48,6 +50,15 @@ export default class Column {
   removeCard(cardId) {
     this.cards = this.cards.filter((card) => card.id !== cardId);
     this.updateLocalStorage();
+  }
+
+  handleRemoveCard(event) {
+    const { cardId } = event.detail;
+    const cardIndex = this.cards.findIndex((card) => card.id === cardId);
+    if (cardIndex !== -1) {
+      this.cards.splice(cardIndex, 1);
+      this.updateLocalStorage(); // Обновляем LocalStorage после удаления
+    }
   }
   // End LocalStorage
 
@@ -127,7 +138,7 @@ export default class Column {
         const cardText = cardElement.textContent.replace('×', '').trim(); // Удаляем символ закрытия из текста
         return { id: cardId, text: cardText };
       });
-      this.updateLocalStorage();
+
       // Также обновляем LocalStorage для исходной колонки, если карточка была перенесена
       if (window.sourceColumn && window.sourceColumn !== this.title) {
         const boardState = JSON.parse(localStorage.getItem('boardState')) || {};
@@ -137,6 +148,7 @@ export default class Column {
         boardState[window.sourceColumn] = sourceCards;
         localStorage.setItem('boardState', JSON.stringify(boardState));
       }
+      this.updateLocalStorage();
 
       // Сброс глобального состояния
       window.draggingCard = null;
