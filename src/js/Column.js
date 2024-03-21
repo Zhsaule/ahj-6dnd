@@ -30,6 +30,27 @@ export default class Column {
     return columnElement;
   }
 
+  // Begin LocalStorage
+  updateLocalStorage() {
+    const boardState = JSON.parse(localStorage.getItem('boardState')) || {};
+    boardState[this.title] = this.cards.map(({ id, text }) => ({ id, text }));
+    localStorage.setItem('boardState', JSON.stringify(boardState));
+  }
+
+  addCard(text) {
+    const cardId = Date.now().toString(); // Генерируем ID здесь
+    const card = new Card(cardId, text, () => this.removeCard(cardId));
+    this.cards.push({ id: cardId, text, element: card.element });
+    this.element.querySelector('.cards-container').appendChild(card.element);
+    this.updateLocalStorage();
+  }
+
+  removeCard(cardId) {
+    this.cards = this.cards.filter((card) => card.id !== cardId);
+    this.updateLocalStorage();
+  }
+  // End LocalStorage
+
   showInputField(addCardButton) {
     addCardButton.classList.add('hidden');
 
@@ -69,18 +90,19 @@ export default class Column {
       }
     };
 
+    // Добавляем обработчик событий для нажатия клавиши Enter
+    inputField.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter' && inputField.value.trim() !== '') {
+        addButton.click(); // Программно нажимаем кнопку "Add"
+      }
+    });
+
     // Добавляем элементы на страницу
     buttonContainer.appendChild(addButton);
     buttonContainer.appendChild(cancelButton);
     this.element.appendChild(inputField);
     this.element.appendChild(buttonContainer);
-  }
-
-  addCard(text) {
-    const card = new Card(text);
-    card.addDragEvents(); // Добавляем события drag к карточке
-    this.cards.push(card);
-    this.element.querySelector('.cards-container').appendChild(card.element);
+    inputField.focus();
   }
 
   addDropEvents() {
@@ -99,6 +121,26 @@ export default class Column {
 
     cardsContainer.addEventListener('drop', (e) => {
       e.preventDefault();
+      const newCardsOrder = Array.from(cardsContainer.querySelectorAll('.card'));
+      this.cards = newCardsOrder.map((cardElement) => {
+        const cardId = cardElement.getAttribute('data-id');
+        const cardText = cardElement.textContent.replace('×', '').trim(); // Удаляем символ закрытия из текста
+        return { id: cardId, text: cardText };
+      });
+      this.updateLocalStorage();
+      // Также обновляем LocalStorage для исходной колонки, если карточка была перенесена
+      if (window.sourceColumn && window.sourceColumn !== this.title) {
+        const boardState = JSON.parse(localStorage.getItem('boardState')) || {};
+        const sourceCards = boardState[window.sourceColumn].filter(
+          (card) => card.id !== window.draggingCard.id,
+        );
+        boardState[window.sourceColumn] = sourceCards;
+        localStorage.setItem('boardState', JSON.stringify(boardState));
+      }
+
+      // Сброс глобального состояния
+      window.draggingCard = null;
+      window.sourceColumn = null;
     });
   }
 
